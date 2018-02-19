@@ -1,0 +1,137 @@
+# bpxyYjf9mtVNifssfDU8
+import math
+import MySQLdb
+
+import numpy as np
+import pandas as pd
+
+from sklearn import preprocessing, cross_validation, svm
+from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
+from matplotlib import style
+import datetime
+import time
+
+style.use('ggplot')
+
+conn = MySQLdb.connect(host="", user="", passwd="", db="")
+
+cursor = conn.cursor()
+#cursor.execute('select pedidos.fecha as Date, articulos_pedidos.cantidad_producida as cantidad from articulos_pedidos, pedidos where articulos_id = 238 and articulos_pedidos.pedidos_id = pedidos.id   limit 1000');
+
+
+cursor.execute('select pedidos.fecha as Date, articulos_pedidos.cantidad_producida as cantidad from articulos_pedidos, pedidos where articulos_id = 47 and articulos_pedidos.pedidos_id = pedidos.id and YEAR( pedidos.fecha ) >"2013"');
+
+rows = cursor.fetchall()
+
+'''print rows'''
+
+#str(rows)[0:300]
+df = pd.DataFrame([[ij for ij in i] for i in rows])
+df.rename(columns={0: 'Date', 1: 'cantidad'}, inplace=True);
+df.reset_index()
+#df = df.sort_values(['Date'], ascending=[1]);
+
+print '***********************************************separador********************************'
+
+forecast_col = 'cantidad'
+print forecast_col
+df.fillna(value=-99999, inplace=True)
+print df
+
+df.set_index('Date', inplace=True)
+
+forecast_out = int(math.ceil(0.01 * len(df)))
+
+
+print forecast_out
+df['label'] = df[forecast_col].shift(-forecast_out)
+
+print 'DESPUES DEL LABEL'
+print df
+X = np.array(df.drop(['label'], 1))
+print 'EL VALOR DE X'
+print X
+
+X = preprocessing.scale(X)
+print 'PROCESING SCALE X'
+print X
+
+
+X_lately = X[-forecast_out:]
+print 'VALOR PARA X_lately'
+print X_lately
+
+X = X[:-forecast_out]
+print 'VALOR PARA X ASIGNANDO FORECAST_OUT'
+print X
+
+
+
+
+df.dropna(inplace=True)
+y = np.array(df['label'])
+
+
+print 'DEBUG DE X'
+print X
+print 'DEBUG DE Y'
+print y
+
+X_train, X_test, y_train, y_test = cross_validation.train_test_split(X, y, test_size=0.2)
+
+#X_train = X
+#y_train = y
+clf = LinearRegression(n_jobs=-1)
+
+clf.fit(X_train, y_train)
+
+confidence = clf.score(X_test, y_test)
+
+print 'DEBUG AL SCORE'
+print confidence
+
+forecast_set = clf.predict(X_lately)
+print 'DEBUG PREDICTION'
+print forecast_set
+
+df['Forecast'] = np.nan
+print 'DEBUG FORECAST'
+print df['Forecast']
+
+
+
+
+
+
+
+last_date = df.iloc[-1].name
+print 'DEBUG LAST DATE'
+print last_date
+last_unix = time.mktime(last_date.timetuple())
+
+one_day = 86400
+next_unix = last_unix + one_day
+
+for i in forecast_set:
+    next_date = datetime.datetime.fromtimestamp(next_unix)
+    next_unix += 86400
+    df.loc[next_date] = [np.nan for _ in range(len(df.columns)-1)]+[i]
+
+
+
+df['cantidad'].plot()
+df['Forecast'].plot()
+
+
+plt.legend(loc=4)
+plt.title('Prediccion de datos para Galleta tradicional de avena')
+plt.xlabel('Fecha')
+plt.ylabel('Cantidad')
+plt.show()
+
+
+
+
+
+
