@@ -135,3 +135,39 @@ plt.show()
 
 
 
+
+
+############################################################################################################
+
+
+
+
+import numpy as np
+import pandas as pd
+import math
+import MySQLdb
+import xlrd
+
+print "carlos"
+
+#datos = pd.read_csv('datospyy.csv', header=0)
+
+
+xls = pd.ExcelFile('datospy.xlsx')
+print(xls.sheet_names)
+
+df=xls.parse('Hoja1')
+df=xls.parse('Hoja1')
+
+print df['Internet']*2
+print df['Television']
+
+print df
+
+
+
+
+
+
+
+
